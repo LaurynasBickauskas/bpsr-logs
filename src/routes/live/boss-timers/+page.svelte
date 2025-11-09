@@ -261,11 +261,11 @@
   });
 </script>
 
-<div class="flex h-full w-full flex-col justify-start gap-2 p-4">
+<div class="flex h-full w-full flex-col justify-start gap-2 p-1">
     {#if currentMonster}
       <div class="flex w-full flex-col gap-2">
         {#if mobHpData.length > 0}
-          <div class="grid w-full gap-2 grid-cols-10">
+          <div class="grid w-full max-h-[80px] gap-2 grid-cols-10 overflow-y-auto">
             {#each mobHpData
               .filter((mob) => {
                 if (mob.hp_percent == 100 && mob.server_id < 20) { 
@@ -277,7 +277,9 @@
                 return mob.hp_percent > 0;
               })
               .sort((a, b) => a.hp_percent - b.hp_percent ||  b.server_id - a.server_id )
-              .slice(0, 20) as mob}
+              .slice(0, 200
+
+              ) as mob}
               <div class={`relative overflow-hidden rounded-md border ${currentLineId === mob.server_id ? "border-primary/80 ring-2 ring-primary/30" : "border-neutral-700"} bg-neutral-900/60 p-2 text-center text-xs`}>
                 <div
                   class={`absolute inset-y-0 left-0 ${barClass(mob.hp_percent)} transition-all duration-200`}
@@ -317,7 +319,5 @@
         {/each}
       </select>
     </div>
-    <p class="text-xs text-neutral-600">Use shortcut to mark current line dead</p>
-
 </div>
 

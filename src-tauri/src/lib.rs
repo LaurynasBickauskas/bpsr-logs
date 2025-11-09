@@ -14,8 +14,8 @@ use std::process::Command;
 use crate::live::commands::{disable_blur, enable_blur};
 use tauri::menu::MenuBuilder;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::window::Color;
 use tauri::{LogicalPosition, LogicalSize, Manager, Position, Size, Window, WindowEvent};
-use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use tauri_plugin_svelte::ManagerExt;
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
@@ -48,17 +48,9 @@ pub fn run() {
             live::commands::set_crowdsourced_monster_remote,
             live::commands::get_local_player_line,
             live::commands::mark_current_crowdsourced_line_dead,
-            live::commands::get_dps_player_window,
-            live::commands::get_dps_skill_window,
-            live::commands::get_dps_boss_only_player_window,
-            live::commands::get_dps_boss_only_skill_window,
-            live::commands::get_heal_player_window,
-            live::commands::get_heal_skill_window,
             live::commands::reset_encounter,
             live::commands::toggle_pause_encounter,
             live::commands::hard_reset,
-            live::commands::get_test_player_window,
-            live::commands::get_test_skill_window,
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
@@ -70,7 +62,6 @@ pub fn run() {
 
     let tauri_builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(builder.invoke_handler())
@@ -94,8 +85,18 @@ pub fn run() {
             // Setup stuff
             setup_logs(&app_handle).expect("failed to setup logs");
             setup_tray(&app_handle).expect("failed to setup tray");
-            setup_autostart(&app_handle);
             setup_blur(&app_handle);
+
+            if let Some(live_window) = app_handle.get_webview_window(WINDOW_LIVE_LABEL) {
+                if let Err(e) = live_window.set_background_color(Some(Color(0, 0, 0, 0))) {
+                    warn!("failed to set live window background transparent: {e}");
+                }
+            }
+            if let Some(main_window) = app_handle.get_webview_window(WINDOW_MAIN_LABEL) {
+                if let Err(e) = main_window.set_background_color(Some(Color(0, 0, 0, 0))) {
+                    warn!("failed to set main window background transparent: {e}");
+                }
+            }
 
             // Live Meter
             // https://v2.tauri.app/learn/splashscreen/#start-some-setup-tasks
@@ -134,7 +135,6 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(on_window_event_fn)
-        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![])))
         .plugin(tauri_plugin_clipboard_manager::init()) // used to read/write to the clipboard
         .plugin(tauri_plugin_updater::Builder::new().build()) // used for auto updating the app
         .plugin(tauri_plugin_window_state::Builder::default().build()) // used to remember window size/position https://v2.tauri.app/plugin/window-state/
@@ -338,23 +338,6 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         })
         .build(app)?;
     Ok(())
-}
-
-fn setup_autostart(app: &tauri::AppHandle) {
-    use tauri_plugin_autostart::ManagerExt;
-
-    let autostart_manager = app.autolaunch();
-    if let Err(e) = if app.svelte().get_or::<bool>("general", "autostart", true) {
-        autostart_manager.enable()
-    } else {
-        autostart_manager.disable()
-    } {
-        warn!("failed to set autostart: {e}");
-    }
-    match autostart_manager.is_enabled() {
-        Ok(enabled) => info!("registered for autostart? {enabled}"),
-        Err(e) => warn!("failed to check autostart status: {e}"),
-    }
 }
 
 fn setup_blur(app: &tauri::AppHandle) {

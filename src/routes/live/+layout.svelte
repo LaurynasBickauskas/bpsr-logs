@@ -28,7 +28,7 @@
 
 <!-- flex flex-col min-h-screen → makes the page stretch full height and stack header, body, and footer. -->
 <!-- flex-1 on <main> → makes the body expand to fill leftover space, pushing the footer down. -->
-<div class="flex h-screen flex-col text-sm text-white" bind:this={screenshotDiv}>
+<div class="flex h-screen flex-col text-sm text-white rounded-md border border-neutral-700" bind:this={screenshotDiv}>
   <Header {screenshotDiv} />
   <main class={cn("flex-1 overflow-y-auto", !SETTINGS.accessibility.state.transparency && "bg-neutral-900/25")}>
     {@render children()}

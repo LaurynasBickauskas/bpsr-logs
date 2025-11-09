@@ -113,6 +113,10 @@
 
   let inputs: BaseInputs = [
     {
+      id: "markCurrentMonsterDead",
+      label: "Mark Current Monster Dead",
+    },
+    {
       id: "showLiveMeter",
       label: "Show Live Meter",
     },
@@ -125,14 +129,6 @@
       label: "Toggle Live Meter",
     },
     {
-      id: "showDpsTab",
-      label: "Show DPS Tab",
-    },
-    {
-      id: "showHealTab",
-      label: "Show Heal Tab",
-    },
-    {
       id: "enableClickthrough",
       label: "Enable Clickthrough",
     },
@@ -143,14 +139,6 @@
     {
       id: "toggleClickthrough",
       label: "Toggle Clickthrough",
-    },
-    {
-      id: "resetEncounter",
-      label: "Reset Encounter",
-    },
-    {
-      id: "markCurrentMonsterDead",
-      label: "Mark Current Monster Dead",
     },
     {
       id: "hardReset",

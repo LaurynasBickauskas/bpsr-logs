@@ -1,7 +1,6 @@
 use crate::live::bptimer_stream::{
     BPTIMER_BASE_URL, CREATE_HP_REPORT_ENDPOINT, CROWD_SOURCE_API_KEY,
 };
-use crate::live::opcodes_models::class::{get_class_from_spec, get_class_spec_from_skill_id, Class, ClassSpec};
 use crate::live::opcodes_models::{
     attr_type, CombatStats, Encounter, Entity, MONSTER_NAMES, MONSTER_NAMES_BOSS,
     MONSTER_NAMES_CROWDSOURCE, MONSTER_UID_CROWDSOURCE_MAP,
@@ -56,9 +55,6 @@ pub fn process_sync_container_data(
     let char_base = v_data.char_base?;
     target_entity.name = Some(char_base.name?);
     target_entity.entity_type = blueprotobuf::EEntityType::EntChar;
-    target_entity.class = Some(Class::from(v_data.profession_list?.cur_profession_id?));
-    target_entity.ability_score = Some(char_base.fight_point?);
-
     Some(())
 }
 
@@ -143,12 +139,6 @@ pub fn process_aoi_sync_delta(
                                        });
 
         let skill_uid = sync_damage_info.owner_id?;
-        if attacker_entity.class_spec.is_none_or(|class_spec| class_spec == ClassSpec::Unknown) {
-            let class_spec = get_class_spec_from_skill_id(skill_uid);
-            attacker_entity.class = Some(get_class_from_spec(class_spec));
-            attacker_entity.class_spec = Some(class_spec);
-        }
-
         // Skills
         let is_heal = sync_damage_info.r#type.unwrap_or(0) == blueprotobuf::EDamageType::Heal as i32;
         if is_heal {
@@ -248,10 +238,6 @@ fn process_player_attrs(player_entity: &mut Entity, player_uid: i64, attrs: Vec<
                     warn!("Failed to read player name for UID {player_uid}");
                 }
             }
-            #[allow(clippy::cast_possible_truncation)]
-            attr_type::ATTR_PROFESSION_ID => player_entity.class = Some(Class::from(prost::encoding::decode_varint(&mut raw_bytes.as_slice()).unwrap() as i32)),
-            #[allow(clippy::cast_possible_truncation)]
-            attr_type::ATTR_FIGHT_POINT => player_entity.ability_score = Some(prost::encoding::decode_varint(&mut raw_bytes.as_slice()).unwrap() as i32),
             _ => (),
         }
     }
@@ -282,6 +268,7 @@ fn process_monster_attrs(
                     let (Some(monster_id), Some(local_player)) = (monster_entity.monster_id, &local_player) else {
                         continue;
                     };
+                    info!("monster_id={monster_id}");
                     let Some(max_hp) = monster_entity.max_hp else {
                         continue;
                     };
