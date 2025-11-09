@@ -2,12 +2,19 @@
   import { onMount } from "svelte";
   import { commands } from "$lib/bindings";
   import type { Result } from "$lib/bindings";
-  import { SETTINGS } from "$lib/settings-store";
 
   type MobHpData = {
     remote_id: string;
     server_id: number;
     hp_percent: number;
+  };
+
+  type MobHpUpdate = MobHpData;
+
+  type MobChannelStatusItem = {
+    channel_number: number;
+    last_hp: number | null;
+    mob: string;
   };
 
   type CrowdsourcedMonster = {
@@ -22,11 +29,19 @@
     remote_id: string;
   };
 
+  const BPTIMER_BASE_URL = "https://db.bptimer.com";
+  const MOB_CHANNEL_STATUS_ENDPOINT = "/api/collections/mob_channel_status/records";
+  const REALTIME_ENDPOINT = "/api/realtime";
+  const MOB_COLLECTION_AUTH_TOKEN =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2xsZWN0aW9uSWQiOiJfcGJfdXNlcnNfYXV0aF8iLCJleHAiOjE3NjMxMTYwMTIsImlkIjoibmhtc2s3Z2g1ODhieXc3IiwicmVmcmVzaGFibGUiOnRydWUsInR5cGUiOiJhdXRoIn0.I81wYPhG0u8IUcQWZGBFsKS5abnQ1JOtFjIcjqkyO0A";
+
+  const RESEED_INTERVAL_MS = 120_000;
+  const STORE_ENTRY_TTL_MS = 300_000;
+  const SSE_RETRY_DELAY_MS = 3_000;
+
   const commandsExtended = commands as typeof commands & {
     getCrowdsourcedMonster: () => Promise<CrowdsourcedMonster | null>;
     getCrowdsourcedMonsterOptions: () => Promise<CrowdsourcedMonsterOption[]>;
-    getCrowdsourcedMobHp: () => Promise<Result<MobHpData[], string>>;
-    setBptimerStreamActive: (active: boolean) => Promise<Result<null, string>>;
     setCrowdsourcedMonsterRemote: (remoteId: string) => Promise<Result<null, string>>;
     getLocalPlayerLine: () => Promise<Result<number | null, string>>;
     markCurrentCrowdsourcedLineDead: () => Promise<Result<null, string>>;
@@ -37,17 +52,24 @@
   let selectedRemoteId: string | null = $state(null);
   let mobHpData: MobHpData[] = $state([]);
   let currentLineId: number | null = $state(null);
-  let streamActive = false;
-
-  type CacheEntry = { data: MobHpData[]; timestamp: number };
-  const mobHpCache = new Map<string, CacheEntry>();
-  const CACHE_TTL_MS = 20_000;
 
   type HpChangeRecord = { hp: number; timestamp: number };
+
+  const mobHpStore = new Map<string, Map<number, { data: MobHpData; timestamp: number }>>();
   const mobHpLastChange = new Map<string, HpChangeRecord>();
-  const STALE_HP_THRESHOLD = 30;
-  const STALE_HP_DURATION_MS = 30_000;
+  const lastSeedTimestamps = new Map<string, number>();
+
   let activeRemoteId: string | null = null;
+  let streamActive = false;
+  let streamAbortController: AbortController | null = null;
+  let streamRunner: Promise<void> | null = null;
+
+  let fetchInterval: ReturnType<typeof setInterval> | null = null;
+  let reseedInterval: ReturnType<typeof setInterval> | null = null;
+  let cleanupInterval: ReturnType<typeof setInterval> | null = null;
+
+  let seedNonce = 0;
+  const textDecoder = new TextDecoder();
 
   function mobKey(entry: MobHpData) {
     return `${entry.remote_id}:${entry.server_id}`;
@@ -75,6 +97,9 @@
 
   function filterStaleEntries(entries: MobHpData[]) {
     const now = Date.now();
+    const STALE_HP_THRESHOLD = 30;
+    const STALE_HP_DURATION_MS = 30_000;
+
     return entries.filter((entry) => {
       if (entry.hp_percent > STALE_HP_THRESHOLD) {
         return true;
@@ -85,31 +110,6 @@
       }
       return now - record.timestamp < STALE_HP_DURATION_MS;
     });
-  }
-
-  function setStreamActive(active: boolean) {
-    if (streamActive === active) {
-      return;
-    }
-
-    streamActive = active;
-
-    void commandsExtended
-      .setBptimerStreamActive(active)
-      .then((result) => {
-        if (result.status === "error") {
-          console.error("boss-timers/+page:setStreamActive", {
-            error: result.error,
-            active,
-          });
-        }
-      })
-      .catch((error) => {
-        console.error("boss-timers/+page:setStreamActive", {
-          error,
-          active,
-        });
-      });
   }
 
   function clampPercent(value: number) {
@@ -125,26 +125,418 @@
     return "bg-green-500/20";
   }
 
+  function refreshMobHpData() {
+    if (!activeRemoteId) {
+      mobHpData = [];
+      return;
+    }
+
+    const serverMap = mobHpStore.get(activeRemoteId);
+    if (!serverMap) {
+      mobHpData = [];
+      return;
+    }
+
+    const entries = Array.from(serverMap.values()).map((entry) => entry.data);
+    updateMobLastChange(entries);
+    mobHpData = filterStaleEntries(entries);
+  }
+
+  function upsertMobEntry(remoteId: string, serverId: number, hpPercent: number) {
+    const now = Date.now();
+    let serverMap = mobHpStore.get(remoteId);
+    if (!serverMap) {
+      serverMap = new Map();
+      mobHpStore.set(remoteId, serverMap);
+    }
+
+    const data: MobHpData = {
+      remote_id: remoteId,
+      server_id: serverId,
+      hp_percent: clampPercent(hpPercent),
+    };
+
+    serverMap.set(serverId, { data, timestamp: now });
+    if (serverId !== 0) {
+      serverMap.delete(0);
+    }
+
+    if (remoteId === activeRemoteId) {
+      refreshMobHpData();
+    }
+  }
+
+  function applySeed(remoteId: string, items: MobChannelStatusItem[]) {
+    const now = Date.now();
+    let serverMap = mobHpStore.get(remoteId);
+    if (!serverMap) {
+      serverMap = new Map();
+      mobHpStore.set(remoteId, serverMap);
+    } else {
+      serverMap.clear();
+    }
+
+    if (items.length === 0) {
+      const data: MobHpData = { remote_id: remoteId, server_id: 0, hp_percent: 100 };
+      serverMap.set(0, { data, timestamp: now });
+    } else {
+      for (const item of items) {
+        const hpPercent = item.last_hp ?? 100;
+        const data: MobHpData = {
+          remote_id: remoteId,
+          server_id: item.channel_number,
+          hp_percent: clampPercent(hpPercent),
+        };
+        serverMap.set(item.channel_number, { data, timestamp: now });
+        if (item.channel_number !== 0) {
+          serverMap.delete(0);
+        }
+      }
+    }
+
+    if (remoteId === activeRemoteId) {
+      refreshMobHpData();
+    }
+  }
+
+  function cleanupMobHpStore(maxAgeMs = STORE_ENTRY_TTL_MS) {
+    const now = Date.now();
+
+    for (const [remoteId, serverMap] of mobHpStore) {
+      for (const [serverId, entry] of serverMap) {
+        if (now - entry.timestamp > maxAgeMs) {
+          serverMap.delete(serverId);
+        }
+      }
+
+      if (serverMap.size === 0) {
+        mobHpStore.delete(remoteId);
+      }
+    }
+
+    if (activeRemoteId && !mobHpStore.has(activeRemoteId)) {
+      mobHpData = [];
+    }
+  }
+
+  function switchActiveRemote(remoteId: string | null) {
+    if (activeRemoteId === remoteId) {
+      selectedRemoteId = remoteId;
+      return;
+    }
+
+    if (activeRemoteId) {
+      mobHpStore.delete(activeRemoteId);
+    }
+
+    activeRemoteId = remoteId;
+    mobHpLastChange.clear();
+
+    if (!remoteId) {
+      selectedRemoteId = null;
+      mobHpData = [];
+      return;
+    }
+
+    if (!mobHpStore.has(remoteId)) {
+      mobHpStore.set(remoteId, new Map());
+    } else {
+      mobHpStore.get(remoteId)?.clear();
+    }
+
+    selectedRemoteId = remoteId;
+    refreshMobHpData();
+  }
+
+  async function ensureSeeded(remoteId: string, opts: { force?: boolean } = {}) {
+    const { force = false } = opts;
+    const lastSeed = lastSeedTimestamps.get(remoteId) ?? 0;
+    if (!force && Date.now() - lastSeed < RESEED_INTERVAL_MS) {
+      return;
+    }
+
+    const currentNonce = ++seedNonce;
+
+    try {
+      const items = await fetchMobChannelStatus(remoteId);
+      if (seedNonce !== currentNonce) {
+        return;
+      }
+      if (activeRemoteId !== remoteId) {
+        return;
+      }
+
+      applySeed(remoteId, items);
+      lastSeedTimestamps.set(remoteId, Date.now());
+    } catch (error) {
+      console.error("live/+page:ensureSeeded", { error, remoteId });
+    }
+  }
+
+  async function fetchMobChannelStatus(remoteId: string, signal?: AbortSignal): Promise<MobChannelStatusItem[]> {
+    const params = new URLSearchParams({
+      page: "1",
+      perPage: "200",
+      skipTotal: "true",
+      filter: `mob = '${remoteId}'`,
+    });
+
+    const response = await fetch(`${BPTIMER_BASE_URL}${MOB_CHANNEL_STATUS_ENDPOINT}?${params.toString()}`, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        authorization: MOB_COLLECTION_AUTH_TOKEN,
+      },
+      signal,
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Failed to seed mob state (${response.status}): ${body}`);
+    }
+
+    const payload = (await response.json()) as { items?: MobChannelStatusItem[] };
+    return payload.items ?? [];
+  }
+
+  function setStreamActive(active: boolean) {
+    if (streamActive === active) {
+      return;
+    }
+
+    streamActive = active;
+
+    if (active) {
+      if (!streamAbortController) {
+        streamAbortController = new AbortController();
+        streamRunner = runSseLoop(streamAbortController.signal)
+          .catch((error) => {
+            if (!(error instanceof DOMException && error.name === "AbortError")) {
+              console.error("live/+page:stream", { error });
+            }
+          })
+          .finally(() => {
+            if (streamAbortController?.signal.aborted) {
+              streamAbortController = null;
+            }
+            streamRunner = null;
+            streamActive = false;
+          });
+      }
+    } else {
+      streamAbortController?.abort();
+      streamAbortController = null;
+      streamRunner = null;
+    }
+  }
+
+  async function runSseLoop(signal: AbortSignal) {
+    while (!signal.aborted) {
+      try {
+        await streamOnce(signal);
+      } catch (error) {
+        if (signal.aborted) {
+          return;
+        }
+        console.error("live/+page:runSseLoop", { error });
+        await delay(SSE_RETRY_DELAY_MS, signal).catch(() => {});
+      }
+    }
+  }
+
+  async function streamOnce(signal: AbortSignal) {
+    const response = await fetch(`${BPTIMER_BASE_URL}${REALTIME_ENDPOINT}`, {
+      method: "GET",
+      headers: {
+        accept: "text/event-stream",
+        "cache-control": "no-cache",
+        pragma: "no-cache",
+      },
+      signal,
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Failed to connect to realtime stream (${response.status}): ${body}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("Realtime stream response did not include a readable body");
+    }
+
+    let buffer = "";
+    let currentEvent: { eventType?: string; data?: string } | null = null;
+    let subscribed = false;
+
+    while (!signal.aborted) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (value) {
+        buffer += textDecoder.decode(value, { stream: true });
+      }
+
+      let newlineIndex: number;
+      while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+        let line = buffer.slice(0, newlineIndex);
+        buffer = buffer.slice(newlineIndex + 1);
+
+        if (line.endsWith("\r")) {
+          line = line.slice(0, -1);
+        }
+
+        if (line.length === 0) {
+          if (currentEvent) {
+            subscribed = await handleSseEvent(currentEvent, subscribed, signal);
+          }
+          currentEvent = null;
+          continue;
+        }
+
+        if (line.startsWith("event:")) {
+          const eventType = line.slice(6).trim();
+          currentEvent = currentEvent ?? {};
+          currentEvent.eventType = eventType;
+          continue;
+        }
+
+        if (line.startsWith("data:")) {
+          const dataLine = line.slice(5);
+          currentEvent = currentEvent ?? {};
+          currentEvent.data = currentEvent.data ? `${currentEvent.data}\n${dataLine}` : dataLine;
+          continue;
+        }
+
+        if (line.startsWith("id:")) {
+          continue;
+        }
+      }
+    }
+  }
+
+  async function handleSseEvent(
+    event: { eventType?: string; data?: string },
+    subscribed: boolean,
+    signal: AbortSignal,
+  ): Promise<boolean> {
+    if (!event.eventType) {
+      return subscribed;
+    }
+
+    if (event.eventType === "PB_CONNECT" && event.data) {
+      try {
+        const parsed = JSON.parse(event.data) as { clientId?: string };
+        if (typeof parsed?.clientId === "string") {
+          await sendSubscription(parsed.clientId, signal);
+        }
+      } catch (error) {
+        console.error("live/+page:handleSseEvent PB_CONNECT", { error });
+      }
+      return subscribed;
+    }
+
+    if (event.eventType === "PB_SUBSCRIBED") {
+      return true;
+    }
+
+    if (event.eventType === "mob_hp_updates" && event.data) {
+      try {
+        const update = parseMobHpUpdate(event.data);
+        upsertMobEntry(update.remote_id, update.server_id, update.hp_percent);
+      } catch (error) {
+        console.error("live/+page:handleSseEvent mob_hp_updates", { error, payload: event.data });
+      }
+      return subscribed;
+    }
+
+    if (event.eventType === "mob_resets" && event.data) {
+      const remoteId = event.data.replace(/^"+|"+$/g, "");
+      if (remoteId && remoteId === activeRemoteId) {
+        void ensureSeeded(remoteId, { force: true });
+      }
+      return subscribed;
+    }
+
+    return subscribed;
+  }
+
+  async function sendSubscription(clientId: string, signal: AbortSignal) {
+    const response = await fetch(`${BPTIMER_BASE_URL}${REALTIME_ENDPOINT}`, {
+      method: "POST",
+      headers: {
+        accept: "*/*",
+        authorization: MOB_COLLECTION_AUTH_TOKEN,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        clientId,
+        subscriptions: ["mob_hp_updates", "mob_resets"],
+      }),
+      signal,
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Subscription failed (${response.status}): ${body}`);
+    }
+  }
+
+  function parseMobHpUpdate(raw: string): MobHpUpdate {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length < 3) {
+      throw new Error("Unexpected mob_hp_updates payload format");
+    }
+
+    const [remoteId, serverId, hpPercent] = parsed;
+    if (typeof remoteId !== "string") {
+      throw new Error("mob_hp_updates payload missing remote id");
+    }
+    if (typeof serverId !== "number") {
+      throw new Error("mob_hp_updates payload missing server id");
+    }
+    if (typeof hpPercent !== "number") {
+      throw new Error("mob_hp_updates payload missing hp percent");
+    }
+
+    return {
+      remote_id: remoteId,
+      server_id: serverId,
+      hp_percent: clampPercent(hpPercent),
+    };
+  }
+
+  function delay(ms: number, signal: AbortSignal) {
+    return new Promise<void>((resolve, reject) => {
+      const onAbort = () => {
+        clearTimeout(timeoutId);
+        signal.removeEventListener("abort", onAbort);
+        reject(new DOMException("Aborted", "AbortError"));
+      };
+
+      const timeoutId = setTimeout(() => {
+        signal.removeEventListener("abort", onAbort);
+        resolve();
+      }, ms);
+
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+
+      signal.addEventListener("abort", onAbort);
+    });
+  }
+
   async function loadMonsterOptions() {
     try {
       monsterOptions = await commandsExtended.getCrowdsourcedMonsterOptions();
     } catch (error) {
-      console.error("boss-timers/+page:loadMonsterOptions", { error });
+      console.error("live/+page:loadMonsterOptions", { error });
       monsterOptions = [];
     }
   }
-
-  onMount(() => {
-    setStreamActive(SETTINGS.integration.state.bptimerUI);
-    void loadMonsterOptions();
-    void fetchData();
-    const interval = setInterval(fetchData, 500);
-
-    return () => {
-      clearInterval(interval);
-      setStreamActive(false);
-    };
-  });
 
   async function handleMonsterSelect(remoteId: string) {
     if (!remoteId || remoteId === currentMonster?.remote_id) {
@@ -154,23 +546,16 @@
     try {
       const result = await commandsExtended.setCrowdsourcedMonsterRemote(remoteId);
       if (result.status === "error") {
-        console.error("boss-timers/+page:setCrowdsourcedMonsterRemote", {
-          error: result.error,
-          remoteId,
-        });
+        console.error("live/+page:setCrowdsourcedMonsterRemote", { error: result.error, remoteId });
         return;
       }
 
-      selectedRemoteId = remoteId;
-      activeRemoteId = remoteId;
-      mobHpLastChange.clear();
-      mobHpCache.delete(remoteId);
-      await fetchData();
+      switchActiveRemote(remoteId);
+      mobHpStore.get(remoteId)?.clear();
+      mobHpData = [];
+      void ensureSeeded(remoteId, { force: true });
     } catch (error) {
-      console.error("boss-timers/+page:setCrowdsourcedMonsterRemote", {
-        error,
-        remoteId,
-      });
+      console.error("live/+page:setCrowdsourcedMonsterRemote", { error, remoteId });
     }
   }
 
@@ -178,86 +563,55 @@
     try {
       currentMonster = await commandsExtended.getCrowdsourcedMonster();
     } catch (error) {
-      console.error("boss-timers/+page:getCrowdsourcedMonster", { error });
+      console.error("live/+page:getCrowdsourcedMonster", { error });
       currentMonster = null;
     }
 
     const remoteId = currentMonster?.remote_id ?? null;
     if (remoteId !== activeRemoteId) {
-      mobHpLastChange.clear();
-      activeRemoteId = remoteId;
+      switchActiveRemote(remoteId);
+      if (remoteId) {
+        void ensureSeeded(remoteId, { force: true });
+      }
     }
-    selectedRemoteId = remoteId;
 
     try {
       const lineResult = await commandsExtended.getLocalPlayerLine();
-      console.log("lineResult", lineResult);
       currentLineId = lineResult.status === "ok" ? lineResult.data ?? null : null;
     } catch (error) {
-      console.error("boss-timers/+page:getLocalPlayerLine", { error });
+      console.error("live/+page:getLocalPlayerLine", { error });
       currentLineId = null;
-    }
-
-    if (!currentMonster) {
-      mobHpData = [];
-      activeRemoteId = null;
-      mobHpLastChange.clear();
-      return;
-    }
-
-    try {
-      const result = await commandsExtended.getCrowdsourcedMobHp();
-      const currentRemoteId = currentMonster.remote_id;
-
-      if (result.status === "ok") {
-        const data = result.data;
-
-        if (currentRemoteId) {
-          if (data.length > 0) {
-            updateMobLastChange(data);
-            const filteredData = filterStaleEntries(data);
-            mobHpCache.set(currentRemoteId, {
-              data,
-              timestamp: Date.now(),
-            });
-            mobHpData = filteredData;
-          } else {
-            const cached = mobHpCache.get(currentRemoteId);
-            if (cached && Date.now() - cached.timestamp <= CACHE_TTL_MS) {
-              updateMobLastChange(cached.data);
-              mobHpData = filterStaleEntries(cached.data);
-            } else {
-              mobHpCache.delete(currentRemoteId);
-              mobHpData = [];
-            }
-          }
-        } else {
-          if (data.length > 0) {
-            updateMobLastChange(data);
-            mobHpData = filterStaleEntries(data);
-          } else {
-            mobHpData = [];
-          }
-        }
-      } else {
-        mobHpData = [];
-      }
-    } catch (error) {
-      console.error("boss-timers/+page:getCrowdsourcedMobHp", { error });
-      mobHpData = [];
     }
   }
 
-  $effect(() => {
-    const isEnabled = SETTINGS.integration.state.bptimerUI;
-    setStreamActive(isEnabled);
-    if (isEnabled) {
-      fetchData();
-    } else {
-      currentMonster = null;
-      selectedRemoteId = null;
+  onMount(() => {
+    setStreamActive(true);
+    void loadMonsterOptions();
+    void fetchData();
+
+    fetchInterval = setInterval(fetchData, 500);
+    reseedInterval = setInterval(() => {
+      if (activeRemoteId) {
+        void ensureSeeded(activeRemoteId);
+      }
+    }, RESEED_INTERVAL_MS);
+    cleanupInterval = setInterval(() => {
+      cleanupMobHpStore();
+      if (activeRemoteId) {
+        refreshMobHpData();
+      }
+    }, 30_000);
+
+    return () => {
+      if (fetchInterval) clearInterval(fetchInterval);
+      if (reseedInterval) clearInterval(reseedInterval);
+      if (cleanupInterval) clearInterval(cleanupInterval);
+      setStreamActive(false);
+      mobHpStore.clear();
+      mobHpLastChange.clear();
       mobHpData = [];
-    }
+      activeRemoteId = null;
+    };
   });
 </script>
 

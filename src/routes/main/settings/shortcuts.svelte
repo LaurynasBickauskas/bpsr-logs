@@ -3,7 +3,6 @@
   import { SvelteSet } from "svelte/reactivity";
   import { unregister } from "@tauri-apps/plugin-global-shortcut";
 
-  import AlertCircleIcon from "virtual:icons/lucide/alert-circle";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import * as Item from "$lib/components/ui/item/index.js";
   import * as Alert from "$lib/components/ui/alert/index.js";
@@ -15,7 +14,6 @@
 
   let editingId: string | null = $state(null);
 
-  // Track modifiers separately from the single main key
   const modifierOrder = ["ctrl", "shift", "alt", "meta"];
   const MODIFIERS = new SvelteSet(modifierOrder);
   const activeMods = new SvelteSet<string>();

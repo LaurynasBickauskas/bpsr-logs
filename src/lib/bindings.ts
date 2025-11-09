@@ -31,22 +31,6 @@ async getCrowdsourcedMonster() : Promise<CrowdsourcedMonster | null> {
 async getCrowdsourcedMonsterOptions() : Promise<CrowdsourcedMonsterOption[]> {
     return await TAURI_INVOKE("get_crowdsourced_monster_options");
 },
-async getCrowdsourcedMobHp() : Promise<Result<MobHpData[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_crowdsourced_mob_hp") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async setBptimerStreamActive(active: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_bptimer_stream_active", { active }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async setCrowdsourcedMonsterRemote(remoteId: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("set_crowdsourced_monster_remote", { remoteId }) };
@@ -95,7 +79,6 @@ async hardReset() : Promise<void> {
 export type CrowdsourcedMonster = { name: string; id: number; remote_id: string | null }
 export type CrowdsourcedMonsterOption = { name: string; id: number; remote_id: string }
 export type HeaderInfo = { totalDmg: number; elapsedMs: number; timeLastCombatPacketMs: number }
-export type MobHpData = { remote_id: string; server_id: number; hp_percent: number }
 
 /** tauri-specta globals **/
 

@@ -34,13 +34,10 @@ pub struct Entity {
     pub heal_stats: CombatStats,
     pub skill_uid_to_heal_stats: HashMap<i32, CombatStats>,
 
-    // Players
-    pub name: Option<String>, // also available for monsters in packets
-
-    // Monsters
+    pub name: Option<String>, 
     pub monster_id: Option<i32>,
-    pub curr_hp: Option<i32>, // also available for players in packets
-    pub max_hp: Option<i32>, // also available for players in packets
+    pub curr_hp: Option<i32>, 
+    pub max_hp: Option<i32>,
 }
 
 #[derive(Debug, Default, Clone)]

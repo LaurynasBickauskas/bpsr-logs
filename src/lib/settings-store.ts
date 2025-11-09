@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS = {
 
 // We need flattened settings for every update to be able to auto-detect new changes
 const RUNE_STORE_OPTIONS = { autoStart: true, saveOnChange: true };
+
 export const SETTINGS = {
   accessibility: new RuneStore(
     'accessibility',

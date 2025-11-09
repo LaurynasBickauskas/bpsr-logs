@@ -3,10 +3,7 @@ use crate::live::crowdsource_persistence::{save_snapshot, CrowdsourceMonsterSnap
 use crate::live::opcodes_models::{
     get_crowdsource_monster_choices, resolve_crowdsource_remote, Encounter, EncounterMutex,
 };
-use crate::live::bptimer_stream::{
-    MobHpData, MobHpStoreMutex, BpTimerStreamControlSender, BPTIMER_BASE_URL,
-    CREATE_HP_REPORT_ENDPOINT, CROWD_SOURCE_API_KEY,
-};
+use crate::live::bptimer_stream::{BPTIMER_BASE_URL, CREATE_HP_REPORT_ENDPOINT, CROWD_SOURCE_API_KEY};
 use crate::packets::packet_capture::request_restart;
 use crate::WINDOW_LIVE_LABEL;
 use log::{info, warn};
@@ -101,23 +98,6 @@ pub fn get_crowdsourced_monster_options() -> Vec<CrowdsourcedMonsterOption> {
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_crowdsourced_mob_hp(
-    encounter_state: tauri::State<'_, EncounterMutex>,
-    store_state: tauri::State<'_, MobHpStoreMutex>,
-) -> Result<Vec<MobHpData>, String> {
-    let remote_id = encounter_state
-        .lock()
-        .map_err(|_| "Failed to lock encounter".to_string())?
-        .crowdsource_monster_remote_id
-        .clone()
-        .ok_or_else(|| "No crowdsourced monster remote id".to_string())?;
-
-
-    Ok(store_state.read().get_by_remote_id(&remote_id))
-}
-
-#[tauri::command]
-#[specta::specta]
 pub fn set_crowdsourced_monster_remote(
     app: tauri::AppHandle,
     encounter_state: tauri::State<'_, EncounterMutex>,
@@ -169,20 +149,8 @@ pub fn get_local_player_line(state: tauri::State<'_, EncounterMutex>) -> Result<
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_bptimer_stream_active(
-    control_state: tauri::State<'_, BpTimerStreamControlSender>,
-    active: bool,
-) -> Result<(), String> {
-    control_state
-        .send(active)
-        .map_err(|err| format!("Failed to update BPTimer stream state: {err}"))
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn mark_current_crowdsourced_line_dead(
     encounter_state: tauri::State<'_, EncounterMutex>,
-    store_state: tauri::State<'_, MobHpStoreMutex>,
 ) -> Result<(), String> {
     let (monster_id, monster_name, remote_id, line, pos_x, pos_y) = {
         let encounter = encounter_state
@@ -257,11 +225,6 @@ pub async fn mark_current_crowdsourced_line_dead(
             "HP report failed with status {}",
             response.status()
         ));
-    }
-
-    {
-        let mut store = store_state.write();
-        store.seed_remote_hp(&remote_id, 0, Some(0));
     }
 
     Ok(())

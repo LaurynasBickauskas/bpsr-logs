@@ -13,14 +13,11 @@
   let attemptedValue: boolean | null = $state(null);
 
   function handleSwitchChange(newState: boolean) {
-    // if the user is trying to turn it off, show confirmation
     if (newState === false) {
-      // keep the switch visually ON until the user confirms
       checked = true;
       attemptedValue = false;
       confirmOpen = true;
     } else {
-      // allow turning on without confirmation
       checked = true;
       attemptedValue = null;
     }

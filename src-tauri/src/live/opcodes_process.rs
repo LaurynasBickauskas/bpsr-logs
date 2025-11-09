@@ -58,20 +58,13 @@ pub fn process_sync_container_data(
     Some(())
 }
 
-// pub fn process_sync_container_dirty_data(
-//     encounter: &mut Encounter,
-//     sync_container_dirty_data: blueprotobuf::SyncContainerDirtyData,
-// ) -> Option<()> {
-//     Some(())
-// }
-
 pub fn process_sync_to_me_delta_info(
     encounter: &mut Encounter,
     sync_to_me_delta_info: blueprotobuf::SyncToMeDeltaInfo,
     is_bptimer_enabled: bool,
 ) -> Option<()> {
     let delta_info = sync_to_me_delta_info.delta_info?;
-    encounter.local_player_uid = Some(delta_info.uuid? >> 16); // UUID =/= uid (have to >> 16)
+    encounter.local_player_uid = Some(delta_info.uuid? >> 16);
     process_aoi_sync_delta(encounter, delta_info.base_delta?, is_bptimer_enabled);
     Some(())
 }
@@ -81,10 +74,9 @@ pub fn process_aoi_sync_delta(
     aoi_sync_delta: blueprotobuf::AoiSyncDelta,
     is_bptimer_enabled: bool,
 ) -> Option<()> {
-    let target_uuid = aoi_sync_delta.uuid?; // UUID =/= uid (have to >> 16)
+    let target_uuid = aoi_sync_delta.uuid?;
     let target_uid = target_uuid >> 16;
 
-    // Process attributes
     let target_entity_type = blueprotobuf::EEntityType::from(target_uuid);
     {
         let target_entity = encounter
@@ -105,10 +97,9 @@ pub fn process_aoi_sync_delta(
     }
 
     let Some(skill_effect) = aoi_sync_delta.skill_effects else {
-        return Some(()); // return ok since this variable usually doesn't exist
+        return Some(()); 
     };
 
-    // Process Damage
     for sync_damage_info in skill_effect.damages {
         let target_entity = encounter.entity_uid_to_entity.get(&target_uid);
         let monster_id = target_entity.and_then(|e| e.monster_id);
@@ -124,7 +115,6 @@ pub fn process_aoi_sync_delta(
         } else {
             None
         };
-        // info!("crowdsource_name={crowdsource_name:?}, monster_id={monster_id:?}");
         let crowdsource_remote_id = monster_id
             .and_then(|id| MONSTER_UID_CROWDSOURCE_MAP.get(&id).cloned());
         let attacker_uuid = sync_damage_info
@@ -139,52 +129,19 @@ pub fn process_aoi_sync_delta(
                                        });
 
         let skill_uid = sync_damage_info.owner_id?;
-        // Skills
         let is_heal = sync_damage_info.r#type.unwrap_or(0) == blueprotobuf::EDamageType::Heal as i32;
-        if is_heal {
-            let heal_skill = attacker_entity
-                .skill_uid_to_dps_stats
-                .entry(skill_uid)
-                .or_default();
-            process_stats(&sync_damage_info, heal_skill);
-            process_stats(&sync_damage_info, &mut attacker_entity.heal_stats); // update total entity heal stats
-            process_stats(&sync_damage_info, &mut encounter.heal_stats); // update total encounter heal stats
-            // info!("dmg packet: {attacker_uid} to {target_uid}: {} total heal", heal_skill.value);
-        } else {
-            let dps_skill = attacker_entity
-                .skill_uid_to_dps_stats
-                .entry(skill_uid)
-                .or_default();
-            process_stats(&sync_damage_info, dps_skill);
-            process_stats(&sync_damage_info, &mut attacker_entity.dmg_stats); // update total entity dmg stats
-            process_stats(&sync_damage_info, &mut encounter.dmg_stats); // update total encounter heal stats
-            
-            // Track last hit crowdsourced monster name and ID
-            if is_crowdsource {
-                if crowdsource_remote_id.is_none() {
-                    warn!(
-                        "live::opcodes_process::handle_damage_packet - crowdsourced monster missing remote id for monster_id={monster_id:?}, monster_name={crowdsource_name:?}"
-                    );
-                }
-                encounter.crowdsource_monster_name = crowdsource_name.clone();
-                encounter.crowdsource_monster_id = monster_id;
-                encounter.crowdsource_monster_remote_id = crowdsource_remote_id.clone();
+        if is_crowdsource {
+            if crowdsource_remote_id.is_none() {
+                warn!(
+                    "live::opcodes_process::handle_damage_packet - crowdsourced monster missing remote id for monster_id={monster_id:?}, monster_name={crowdsource_name:?}"
+                );
             }
-            
-            if is_boss {
-                let skill_boss_only = attacker_entity
-                    .skill_uid_to_dps_stats_boss_only
-                    .entry(skill_uid)
-                    .or_default();
-                process_stats(&sync_damage_info, skill_boss_only);
-                process_stats(&sync_damage_info, &mut attacker_entity.dmg_stats_boss_only); // update total entity boss only dmg stats
-                process_stats(&sync_damage_info, &mut encounter.dmg_stats_boss_only); // update total encounter heal stats
-            }
-            // info!("dmg packet: {attacker_uid} to {target_uid}: {} total dmg", dps_skill.value);
+            encounter.crowdsource_monster_name = crowdsource_name.clone();
+            encounter.crowdsource_monster_id = monster_id;
+            encounter.crowdsource_monster_remote_id = crowdsource_remote_id.clone();
         }
     }
 
-    // Figure out timestamps
     let timestamp_ms = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards")
@@ -197,16 +154,15 @@ pub fn process_aoi_sync_delta(
 }
 
 fn process_stats(sync_damage_info: &blueprotobuf::SyncDamageInfo, stats: &mut CombatStats) {
-    // TODO: from testing, first bit is set when there's crit, 3rd bit for if it causes lucky (no idea what that means), require more testing here
-    const CRIT_BIT: i32 = 0b00_00_00_01; // 1st bit
+    const CRIT_BIT: i32 = 0b00_00_00_01;
 
     let non_lucky_dmg = sync_damage_info.value;
     let lucky_value = sync_damage_info.lucky_value;
-    let actual_value = non_lucky_dmg.or(lucky_value).unwrap_or(0); // The damage is either non-lucky or lucky (exclusive)
+    let actual_value = non_lucky_dmg.or(lucky_value).unwrap_or(0);
 
     let is_lucky = lucky_value.is_some();
     let flag = sync_damage_info.type_flag.unwrap_or_default();
-    let is_crit = (flag & CRIT_BIT) != 0; // No idea why, but SyncDamageInfo.is_crit isn't correct
+    let is_crit = (flag & CRIT_BIT) != 0;
     if is_crit {
         stats.crit_hits += 1;
         stats.crit_value += actual_value;
@@ -226,10 +182,9 @@ fn process_player_attrs(player_entity: &mut Entity, player_uid: i64, attrs: Vec<
         };
         let Some(attr_id) = attr.id else { continue; };
 
-        // info!("{} {}", attr_type::(attr_id),hex::encode(raw_bytes.read_remaining()));
         match attr_id {
             attr_type::ATTR_NAME => {
-                raw_bytes.remove(0); // not sure why, there's some weird character as the first e.g. "\u{6}Sketal"
+                raw_bytes.remove(0);
                 let player_name_result = BinaryReader::from(raw_bytes).read_string();
                 if let Ok(player_name) = player_name_result {
                     player_entity.name = Some(player_name.clone());
@@ -262,13 +217,10 @@ fn process_monster_attrs(
                 monster_entity.curr_hp = Some(curr_hp);
 
                 if is_bptimer_enabled {
-                    // Crowdsource Data: if people abuse this, we will change the security
-                    // const LOCAL_ENDPOINT: &str = "http://localhost:3000";
                     let endpoint = format!("{BPTIMER_BASE_URL}{CREATE_HP_REPORT_ENDPOINT}");
                     let (Some(monster_id), Some(local_player)) = (monster_entity.monster_id, &local_player) else {
                         continue;
                     };
-                    // info!("monster_id={monster_id}");
                     let Some(max_hp) = monster_entity.max_hp else {
                         continue;
                     };
@@ -293,8 +245,6 @@ fn process_monster_attrs(
                             Some(old_hp_pct) => old_hp_pct != new_hp_pct && new_hp_pct % 5 == 0,
                         };
 
-                        // Rate limit: only report if hp% changed and hp% is divisible by 5 (e.g. 0%, 5%, etc.)
-                        // Always report the first time we see HP data for a monster.
                         if should_report {
                             info!("Found crowdsourced monster with Name {monster_name} - ID {monster_id} - HP% {new_hp_pct}% on line {line} and pos ({pos_x},{pos_y})");
                             let body = serde_json::json!({

@@ -1,13 +1,11 @@
 <script lang="ts">
   import * as Tabs from "$lib/components/ui/tabs/index.js";
-  import Integration from "./integration.svelte";
   import Misc from "./misc.svelte";
   import Shortcuts from "./shortcuts.svelte";
 
   const settingsTabs = [
     { id: "shortcuts", label: "Shortcuts" },
     { id: "misc", label: "Misc" },
-    { id: "integration", label: "Integration" },
   ];
 </script>
 
@@ -19,5 +17,4 @@
   </Tabs.List>
   <Shortcuts />
   <Misc />
-  <Integration />
 </Tabs.Root>

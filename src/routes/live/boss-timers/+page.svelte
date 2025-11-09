@@ -2,7 +2,6 @@
   import { onMount } from "svelte";
   import { commands } from "$lib/bindings";
   import type { Result } from "$lib/bindings";
-  import { SETTINGS } from "$lib/settings-store";
 
   type MobHpData = {
     remote_id: string;
@@ -135,7 +134,7 @@
   }
 
   onMount(() => {
-    setStreamActive(SETTINGS.integration.state.bptimerUI);
+    setStreamActive(true);
     void loadMonsterOptions();
     void fetchData();
     const interval = setInterval(fetchData, 500);
@@ -248,17 +247,6 @@
     }
   }
 
-  $effect(() => {
-    const isEnabled = SETTINGS.integration.state.bptimerUI;
-    setStreamActive(isEnabled);
-    if (isEnabled) {
-      fetchData();
-    } else {
-      currentMonster = null;
-      selectedRemoteId = null;
-      mobHpData = [];
-    }
-  });
 </script>
 
 <div class="flex h-full w-full flex-col justify-start gap-2 p-1">
