@@ -268,7 +268,7 @@ fn process_monster_attrs(
                     let (Some(monster_id), Some(local_player)) = (monster_entity.monster_id, &local_player) else {
                         continue;
                     };
-                    info!("monster_id={monster_id}");
+                    // info!("monster_id={monster_id}");
                     let Some(max_hp) = monster_entity.max_hp else {
                         continue;
                     };

@@ -265,7 +265,7 @@
     {#if currentMonster}
       <div class="flex w-full flex-col gap-2">
         {#if mobHpData.length > 0}
-          <div class="grid w-full max-h-[80px] gap-2 grid-cols-10 overflow-y-auto">
+          <div class="grid w-full max-h-[80px] gap-1 grid-cols-10 overflow-y-auto">
             {#each mobHpData
               .filter((mob) => {
                 if (mob.hp_percent == 100 && mob.server_id < 20) { 

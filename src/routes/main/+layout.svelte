@@ -1,7 +1,4 @@
 <script lang="ts">
-  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-
-  import AppSidebar from "./sidebar.svelte";
   import Header from "./header.svelte";
   import { setupShortcuts } from "./settings/shortcuts";
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -22,16 +19,11 @@
   });
 </script>
 
-<div class="bg-background text-foreground min-h-screen">
-  <Sidebar.Provider>
-    <AppSidebar />
-    <Sidebar.Inset>
-      <Header />
-      <main>
-        <div class="mx-auto px-8 py-4">
-          {@render children()}
-        </div>
-      </main>
-    </Sidebar.Inset>
-  </Sidebar.Provider>
+<div class="bg-background text-foreground flex min-h-screen flex-col">
+  <Header />
+  <main class="flex-1">
+    <div class="mx-auto px-8 py-4">
+      {@render children()}
+    </div>
+  </main>
 </div>

@@ -117,14 +117,6 @@
       label: "Mark Current Monster Dead",
     },
     {
-      id: "showLiveMeter",
-      label: "Show Live Meter",
-    },
-    {
-      id: "hideLiveMeter",
-      label: "Hide Live Meter",
-    },
-    {
       id: "toggleLiveMeter",
       label: "Toggle Live Meter",
     },
@@ -148,10 +140,6 @@
 </script>
 
 <Tabs.Content value={SETTINGS_CATEGORY}>
-  <Alert.Root variant="destructive" class="mb-4">
-    <AlertCircleIcon />
-    <Alert.Description>TBD: Make it so that having the same shortcut for Show/Hide is Toggle. For now, a separate Toggle shortcut is available.</Alert.Description>
-  </Alert.Root>
   <Alert.Root>
     <Alert.Title>Right click to clear shortcuts</Alert.Title>
   </Alert.Root>
