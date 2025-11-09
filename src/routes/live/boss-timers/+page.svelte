@@ -267,8 +267,16 @@
         {#if mobHpData.length > 0}
           <div class="grid w-full gap-2 grid-cols-10">
             {#each mobHpData
-              .filter((mob) => mob.hp_percent > 0 || currentLineId === mob.server_id)
-              .sort((a, b) => a.hp_percent - b.hp_percent)
+              .filter((mob) => {
+                if (mob.hp_percent == 100 && mob.server_id < 20) { 
+                  return false;
+                }
+                if(currentLineId === mob.server_id) {
+                  return true;
+                }
+                return mob.hp_percent > 0;
+              })
+              .sort((a, b) => a.hp_percent - b.hp_percent ||  b.server_id - a.server_id )
               .slice(0, 20) as mob}
               <div class={`relative overflow-hidden rounded-md border ${currentLineId === mob.server_id ? "border-primary/80 ring-2 ring-primary/30" : "border-neutral-700"} bg-neutral-900/60 p-2 text-center text-xs`}>
                 <div
