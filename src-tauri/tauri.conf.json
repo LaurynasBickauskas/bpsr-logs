@@ -1,8 +1,8 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "bpsr-logs",
-    "version": "0.20.0",
-    "identifier": "com.bpsr-logs",
+    "productName": "bptimer-auto",
+    "version": "0.20.1",
+    "identifier": "com.bptimer.auto",
     "build": {
         "beforeDevCommand": "npm run dev",
         "beforeBuildCommand": "npm run build",
@@ -12,21 +12,23 @@
     "app": {
         "windows": [
             {
-                "title": "BPSR Logs - Live",
+                "title": "bptimer-auto - Live",
                 "label": "live",
                 "url": "live",
                 "shadow": false,
                 "decorations": false,
                 "transparent": true,
+                "backgroundColor": "#00000000",
                 "minWidth": 400,
                 "minHeight": 120,
                 "alwaysOnTop": true,
                 "skipTaskbar": true
             },
             {
-                "title": "BPSR Logs - Main",
+                "title": "bptimer-auto - Main",
                 "label": "main",
                 "url": "main",
+                "backgroundColor": "#00000000",
                 "minWidth": 650,
                 "minHeight": 300,
                 "visible": false
@@ -51,15 +53,15 @@
             "./WinDivert.dll",
             "./WinDivert64.sys"
         ],
-        "createUpdaterArtifacts": true
+        "createUpdaterArtifacts": false
     },
     "plugins": {
         "updater": {
             "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYyREM5QkZEQzRDRDM4REUKUldUZU9NM0UvWnZjOG9qUmZZR25LVmVsa2RBZ3A3RGdneFBGMnJMVUdENmwvZU90YWY0V3NMbnAK",
             "endpoints": [
-                "https://github.com/winjwinj/bpsr-logs/releases/latest/download/latest.json",
-                "https://github.com/winjwinj2/bpsr-logs/releases/latest/download/latest.json",
-                "https://github.com/anonymtester421-cmd/bpsr-logs/releases/latest/download/latest.json"
+                "https://github.com/winjwinj/bptimer-auto/releases/latest/download/latest.json",
+                "https://github.com/winjwinj2/bptimer-auto/releases/latest/download/latest.json",
+                "https://github.com/anonymtester421-cmd/bptimer-auto/releases/latest/download/latest.json"
             ],
             "windows": {
                 "installMode": "basicUi"

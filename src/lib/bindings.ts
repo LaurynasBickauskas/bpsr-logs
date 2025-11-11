@@ -5,47 +5,11 @@
 
 
 export const commands = {
-async enableBlur() : Promise<void> {
-    await TAURI_INVOKE("enable_blur");
-},
-async disableBlur() : Promise<void> {
-    await TAURI_INVOKE("disable_blur");
-},
-async copySyncContainerData() : Promise<void> {
-    await TAURI_INVOKE("copy_sync_container_data");
-},
-async getHeaderInfo() : Promise<Result<HeaderInfo, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_header_info") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async getLastHitBossName() : Promise<string | null> {
-    return await TAURI_INVOKE("get_last_hit_boss_name");
-},
 async getCrowdsourcedMonster() : Promise<CrowdsourcedMonster | null> {
     return await TAURI_INVOKE("get_crowdsourced_monster");
 },
 async getCrowdsourcedMonsterOptions() : Promise<CrowdsourcedMonsterOption[]> {
     return await TAURI_INVOKE("get_crowdsourced_monster_options");
-},
-async getCrowdsourcedMobHp() : Promise<Result<MobHpData[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_crowdsourced_mob_hp") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async setBptimerStreamActive(active: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_bptimer_stream_active", { active }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
 },
 async setCrowdsourcedMonsterRemote(remoteId: string) : Promise<Result<null, string>> {
     try {
@@ -70,59 +34,6 @@ async markCurrentCrowdsourcedLineDead() : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
-},
-async getDpsPlayerWindow() : Promise<PlayersWindow> {
-    return await TAURI_INVOKE("get_dps_player_window");
-},
-async getDpsSkillWindow(playerUidStr: string) : Promise<Result<SkillsWindow, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_dps_skill_window", { playerUidStr }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async getDpsBossOnlyPlayerWindow() : Promise<PlayersWindow> {
-    return await TAURI_INVOKE("get_dps_boss_only_player_window");
-},
-async getDpsBossOnlySkillWindow(playerUidStr: string) : Promise<Result<SkillsWindow, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_dps_boss_only_skill_window", { playerUidStr }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async getHealPlayerWindow() : Promise<PlayersWindow> {
-    return await TAURI_INVOKE("get_heal_player_window");
-},
-async getHealSkillWindow(playerUidStr: string) : Promise<Result<SkillsWindow, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_heal_skill_window", { playerUidStr }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async resetEncounter() : Promise<void> {
-    await TAURI_INVOKE("reset_encounter");
-},
-async togglePauseEncounter() : Promise<void> {
-    await TAURI_INVOKE("toggle_pause_encounter");
-},
-async hardReset() : Promise<void> {
-    await TAURI_INVOKE("hard_reset");
-},
-async getTestPlayerWindow() : Promise<PlayersWindow> {
-    return await TAURI_INVOKE("get_test_player_window");
-},
-async getTestSkillWindow(playerUid: string) : Promise<Result<SkillsWindow, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_test_skill_window", { playerUid }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
 }
 }
 
@@ -138,12 +49,6 @@ async getTestSkillWindow(playerUid: string) : Promise<Result<SkillsWindow, strin
 
 export type CrowdsourcedMonster = { name: string; id: number; remote_id: string | null }
 export type CrowdsourcedMonsterOption = { name: string; id: number; remote_id: string }
-export type HeaderInfo = { totalDps: number; totalDmg: number; elapsedMs: number; timeLastCombatPacketMs: number }
-export type MobHpData = { remote_id: string; server_id: number; hp_percent: number }
-export type PlayerRow = { uid: number; abilityScore: number; className: string; classSpecName: string; name: string; totalValue: number; valuePerSec: number; valuePct: number; critRate: number; critValueRate: number; luckyRate: number; luckyValueRate: number; hits: number; hitsPerMinute: number }
-export type PlayersWindow = { playerRows: PlayerRow[]; localPlayerUid: number; topValue: number }
-export type SkillRow = { uid: number; name: string; totalValue: number; valuePerSec: number; valuePct: number; critRate: number; critValueRate: number; luckyRate: number; luckyValueRate: number; hits: number; hitsPerMinute: number }
-export type SkillsWindow = { inspectedPlayer: PlayerRow; skillRows: SkillRow[]; localPlayerUid: number; topValue: number }
 
 /** tauri-specta globals **/
 

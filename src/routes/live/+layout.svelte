@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { SETTINGS } from "$lib/settings-store";
-  import { cn } from "$lib/utils";
   import { onMount } from "svelte";
   import Footer from "./footer.svelte";
   import Header from "./header.svelte";
@@ -8,7 +6,6 @@
   import { goto } from "$app/navigation";
 
   let { children } = $props();
-  let screenshotDiv: HTMLDivElement | undefined = $state();
 
   // TODO: workaround, need to wait for svelte tanstack devs to respond
   onMount(() => {
@@ -26,11 +23,9 @@
   });
 </script>
 
-<!-- flex flex-col min-h-screen → makes the page stretch full height and stack header, body, and footer. -->
-<!-- flex-1 on <main> → makes the body expand to fill leftover space, pushing the footer down. -->
-<div class="flex h-screen flex-col text-sm text-white" bind:this={screenshotDiv}>
-  <Header {screenshotDiv} />
-  <main class={cn("flex-1 overflow-y-auto", !SETTINGS.accessibility.state.transparency && "bg-neutral-900/25")}>
+<div class="flex h-screen flex-col text-sm text-white rounded-md border border-neutral-700">
+  <Header/>
+  <main class="flex-1 overflow-y-auto">
     {@render children()}
   </main>
   <Footer />

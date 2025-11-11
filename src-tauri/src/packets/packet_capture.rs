@@ -11,7 +11,6 @@ use tokio::sync::watch;
 use windivert::WinDivert;
 use windivert::prelude::WinDivertFlags;
 
-// Global sender for restart signal
 static RESTART_SENDER: OnceCell<watch::Sender<bool>> = OnceCell::new();
 
 pub fn start_capture() -> tokio::sync::mpsc::Receiver<(packets::opcodes::Pkt, Vec<u8>)> {
@@ -22,14 +21,11 @@ pub fn start_capture() -> tokio::sync::mpsc::Receiver<(packets::opcodes::Pkt, Ve
     tauri::async_runtime::spawn(async move {
         loop {
             read_packets(&packet_sender, &mut restart_receiver).await;
-            // Wait for restart signal
             while !*restart_receiver.borrow() {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             }
-            // Reset signal to false before next loop
             let _ = restart_sender.send(false);
         }
-        // info!("oopsies {}", line!());
     });
     packet_receiver
 }
@@ -40,7 +36,7 @@ async fn read_packets(
     restart_receiver: &mut watch::Receiver<bool>,
 ) {
     let windivert = match WinDivert::network(
-        "!loopback && ip && tcp", // todo: idk why but filtering by port just crashes the program, investigate?
+        "!loopback && ip && tcp",
         0,
         WinDivertFlags::new().set_sniff(),
     ) {
@@ -53,38 +49,28 @@ async fn read_packets(
             return;
         }
     }
-    .expect("Failed to initialize WinDivert"); // if windivert doesn't work just exit early - todo: maybe we want to log this with a match so its clearer?
+    .expect("Failed to initialize WinDivert");
     let mut windivert_buffer = vec![0u8; 10 * 1024 * 1024];
-    let mut known_server: Option<Server> = None; // nothing at start
+    let mut known_server: Option<Server> = None;
     let mut tcp_reassembler: TCPReassembler = TCPReassembler::new();
     while let Ok(packet) = windivert.recv(Some(&mut windivert_buffer)) {
-        // info!("{}", line!());
+
         let Ok(network_slices) = SlicedPacket::from_ip(packet.data.as_ref()) else {
-            continue; // if it's not ip, go next packet
+            continue;
         };
-        // info!("{}", line!());
         let Some(Ipv4(ip_packet)) = network_slices.net else {
             continue;
         };
-        // info!("{}", line!());
         let Some(Tcp(tcp_packet)) = network_slices.transport else {
             continue;
         };
-        // info!("{}", line!());
         let curr_server = Server::new(
             ip_packet.header().source(),
             tcp_packet.to_header().source_port,
             ip_packet.header().destination(),
             tcp_packet.to_header().destination_port,
         );
-        // trace!(
-        //     "{} ({}) => {:?}",
-        //     curr_server,
-        //     tcp_packet.payload().len(),
-        //     tcp_packet.payload(),
-        // );
 
-        // 1. Try to identify game server via small packets
         if known_server != Some(curr_server) {
             let tcp_payload = tcp_packet.payload();
             let mut tcp_payload_reader = BinaryReader::from(tcp_payload.to_vec());
@@ -150,7 +136,6 @@ async fn read_packets(
                     }
                 }
             }
-            // 2. Payload length is 98 = Login packets?
             if tcp_payload.len() == 98 {
                 const SIGNATURE_1: [u8; 10] =
                     [0x00, 0x00, 0x00, 0x62, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01];
@@ -249,13 +234,5 @@ async fn read_packets(
         if *restart_receiver.borrow() {
             break;
         }
-    } // todo: if it errors, it breaks out of the loop but will it ever error?
-    // info!("{}", line!());
-}
-
-// Function to send restart signal from another thread/task
-pub fn request_restart() {
-    if let Some(sender) = RESTART_SENDER.get() {
-        let _ = sender.send(true);
     }
 }

@@ -3,7 +3,6 @@
   import { SvelteSet } from "svelte/reactivity";
   import { unregister } from "@tauri-apps/plugin-global-shortcut";
 
-  import AlertCircleIcon from "virtual:icons/lucide/alert-circle";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import * as Item from "$lib/components/ui/item/index.js";
   import * as Alert from "$lib/components/ui/alert/index.js";
@@ -15,7 +14,6 @@
 
   let editingId: string | null = $state(null);
 
-  // Track modifiers separately from the single main key
   const modifierOrder = ["ctrl", "shift", "alt", "meta"];
   const MODIFIERS = new SvelteSet(modifierOrder);
   const activeMods = new SvelteSet<string>();
@@ -65,7 +63,6 @@
       return;
     }
 
-    // Non-modifier key: set/replace the main key
     mainKey = k;
   }
 
@@ -73,18 +70,15 @@
     e.preventDefault();
     const k = normalizeKey(e.key);
 
-    // If a modifier was released, just reflect that (remove it) but don't finalize yet
     if (MODIFIERS.has(k)) {
       activeMods.delete(k);
       stopEdit();
       return;
     }
 
-    // Only finalize when the non-modifier (main) key is released
     if (mainKey) {
       const shortcutKey = currentShortcutString();
 
-      // Ensure we actually have a main key (defensive)
       const hasMain = !!mainKey;
       if (!hasMain) return;
 
@@ -113,44 +107,16 @@
 
   let inputs: BaseInputs = [
     {
-      id: "showLiveMeter",
-      label: "Show Live Meter",
-    },
-    {
-      id: "hideLiveMeter",
-      label: "Hide Live Meter",
+      id: "markCurrentMonsterDead",
+      label: "Mark Current Monster Dead",
     },
     {
       id: "toggleLiveMeter",
       label: "Toggle Live Meter",
     },
     {
-      id: "showDpsTab",
-      label: "Show DPS Tab",
-    },
-    {
-      id: "showHealTab",
-      label: "Show Heal Tab",
-    },
-    {
-      id: "enableClickthrough",
-      label: "Enable Clickthrough",
-    },
-    {
-      id: "disableClickthrough",
-      label: "Disable Clickthrough",
-    },
-    {
       id: "toggleClickthrough",
       label: "Toggle Clickthrough",
-    },
-    {
-      id: "resetEncounter",
-      label: "Reset Encounter",
-    },
-    {
-      id: "markCurrentMonsterDead",
-      label: "Mark Current Monster Dead",
     },
     {
       id: "hardReset",
@@ -160,10 +126,6 @@
 </script>
 
 <Tabs.Content value={SETTINGS_CATEGORY}>
-  <Alert.Root variant="destructive" class="mb-4">
-    <AlertCircleIcon />
-    <Alert.Description>TBD: Make it so that having the same shortcut for Show/Hide is Toggle. For now, a separate Toggle shortcut is available.</Alert.Description>
-  </Alert.Root>
   <Alert.Root>
     <Alert.Title>Right click to clear shortcuts</Alert.Title>
   </Alert.Root>

@@ -40,8 +40,8 @@ fn ip_to_str(ip: &[u8; 4]) -> String {
 }
 
 pub struct TCPReassembler {
-    pub cache: BTreeMap<usize, Vec<u8>>, // sequence -> payload
-    pub next_seq: Option<usize>,         // next expected sequence
+    pub cache: BTreeMap<usize, Vec<u8>>,
+    pub next_seq: Option<usize>,
     pub _data: Vec<u8>,
 }
 
@@ -53,44 +53,6 @@ impl TCPReassembler {
             _data: Vec::new(),
         }
     }
-
-    // // Push a TCP segment and try to reassemble contiguous data.
-    // /// Returns Some(Vec<u8>) if contiguous data is available, None otherwise.
-    // pub fn push_segment(&mut self, packet: TcpSlice) -> Option<(usize, Vec<u8>)> {
-    //     let payload = packet.payload().to_vec();
-    //     let seq = packet.sequence_number() as usize;
-    //     if payload.is_empty() {
-    //         return None;
-    //     }
-    //
-    //     // Insert segment into cache
-    //     self.cache.insert(seq, payload);
-    //
-    //     // Initialize next_seq to the lowest sequence seen if not set
-    //     if self.next_seq.is_none() {
-    //         if let Some((&lowest_seq, _)) = self.cache.first_key_value() {
-    //             self.next_seq = Some(lowest_seq);
-    //         }
-    //     }
-    //
-    //     // Try to assemble contiguous data
-    //     let mut output = Vec::new();
-    //     while let Some(next) = self.next_seq {
-    //         if let Some(segment) = self.cache.remove(&next) {
-    //             // advance next_seq only when we actually use this segment
-    //             self.next_seq = Some(next.wrapping_add(segment.len()));
-    //             output.extend(segment);
-    //         } else {
-    //             break;
-    //         }
-    //     }
-    //
-    //     if output.is_empty() {
-    //         None
-    //     } else {
-    //         Some((self.next_seq?, output))
-    //     }
-    // }
 
     pub fn clear_reassembler(&mut self, seq_number: usize) {
         self.cache = BTreeMap::new();

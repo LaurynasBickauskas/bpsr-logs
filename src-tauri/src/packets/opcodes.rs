@@ -5,13 +5,11 @@ pub struct ParseError;
 #[derive(Debug)]
 pub enum Pkt {
     ServerChangeInfo,
-    // TODO: change all these names
-    SyncNearEntities = 0x00000006,  // NPCNearbyNotify SyncNearEntities
-    SyncContainerData = 0x00000015, // Container DataNotifySyncContainerData - similar to DirtyData, but has detailed like level, curr hp, max hp
-    // SyncContainerDirtyData = 0x00000016, // DirtyDataNotify SyncContainerDirtyData - Name, AP, Class, SubClass
-    SyncServerTime = 0x0000002b,    // ServerTimeNotify SyncServerTime
-    SyncToMeDeltaInfo = 0x0000002e, // PlayerSelfNotify SyncToMeDeltaInfo
-    SyncNearDeltaInfo = 0x0000002d, // PlayerNearbyNotify SyncNearDeltaInfo
+    SyncNearEntities = 0x00000006,  
+    SyncContainerData = 0x00000015,
+    SyncServerTime = 0x0000002b,
+    SyncToMeDeltaInfo = 0x0000002e,
+    SyncNearDeltaInfo = 0x0000002d,
 }
 
 impl TryFrom<u32> for Pkt {
@@ -21,7 +19,6 @@ impl TryFrom<u32> for Pkt {
         match pkt {
             0x00000006 => Ok(Pkt::SyncNearEntities),
             0x00000015 => Ok(Pkt::SyncContainerData),
-            // 0x00000016 => Ok(Pkt::SyncContainerDirtyData),
             0x0000002b => Ok(Pkt::SyncServerTime),
             0x0000002e => Ok(Pkt::SyncToMeDeltaInfo),
             0x0000002d => Ok(Pkt::SyncNearDeltaInfo),
@@ -30,7 +27,7 @@ impl TryFrom<u32> for Pkt {
     }
 }
 
-#[repr(u16)] // ensures the enum is stored as an u16
+#[repr(u16)]
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum FragmentType {

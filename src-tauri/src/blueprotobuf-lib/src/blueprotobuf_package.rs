@@ -6703,11 +6703,7 @@ pub enum SystemType {
     Windows = 5,
 }
 impl SystemType {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
+   pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Null => "SystemType_Null",
             Self::Android => "SystemType_Android",
@@ -6739,10 +6735,6 @@ pub enum BodyPartState {
     Dead = 2,
 }
 impl BodyPartState {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Default => "BodyPartStateDefault",
@@ -6772,10 +6764,6 @@ pub enum EDamageSource {
     Other = 100,
 }
 impl EDamageSource {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Skill => "EDamageSourceSkill",
@@ -6786,7 +6774,6 @@ impl EDamageSource {
             Self::Other => "EDamageSourceOther",
         }
     }
-    /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "EDamageSourceSkill" => Some(Self::Skill),
@@ -11841,7 +11828,6 @@ impl EFarmlandState {
             Self::Over => "EFarmlandStateOver",
         }
     }
-    /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "EFarmlandStateEmpty" => Some(Self::Empty),

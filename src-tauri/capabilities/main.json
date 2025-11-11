@@ -14,13 +14,14 @@
     "global-shortcut:allow-unregister",
     "global-shortcut:allow-unregister-all",
     "os:default",
-    "autostart:allow-enable",
-    "autostart:allow-disable",
     {
       "identifier": "opener:allow-open-path",
       "allow": [
         {
           "path": "$APPLOG"
+        },
+        {
+          "path": "$APPDATA\\tauri-plugin-svelte"
         }
       ]
     },
@@ -29,13 +30,10 @@
       "identifier": "opener:allow-reveal-item-in-dir",
       "allow": [
         {
-          "path": "$APPDATA\\tauri-plugin-svelte\\general.json"
-        },
-        {
           "path": "$APPDATA\\.window-state.json"
         },
         {
-          "path": "$RESOURCE\\bpsr-logs.exe"
+          "path": "$RESOURCE\\bptimer-auto.exe"
         }
       ]
     }
