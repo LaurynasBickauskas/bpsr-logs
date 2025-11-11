@@ -12,8 +12,6 @@ const DEFAULT_SETTINGS = {
     showLiveMeter: "",
     hideLiveMeter: "",
     toggleLiveMeter: "",
-    enableClickthrough: "",
-    disableClickthrough: "",
     toggleClickthrough: "",
     hardReset: "",
     markCurrentMonsterDead: "",

@@ -99,9 +99,7 @@ pub fn process_aoi_sync_delta(
 
     for _ in skill_effect.damages {
         let target_entity = encounter.entity_uid_to_entity.get(&target_uid);
-        info!("target_entity: {target_entity:?}");
         let monster_id = target_entity.and_then(|e| e.monster_id);
-        info!("monster_id: {monster_id:?}");
         let is_crowdsource = monster_id
             .is_some_and(|id| MONSTER_NAMES_CROWDSOURCE.contains_key(&id));
         let crowdsource_name = if is_crowdsource {
@@ -116,6 +114,8 @@ pub fn process_aoi_sync_delta(
             .and_then(|id| MONSTER_UID_CROWDSOURCE_MAP.get(&id).cloned());
 
         if is_crowdsource {
+            info!("is_crowdsource monster_id: {monster_id:?}");
+
             if crowdsource_remote_id.is_none() {
                 warn!(
                     "live::opcodes_process::handle_damage_packet - crowdsourced monster missing remote id for monster_id={monster_id:?}, monster_name={crowdsource_name:?}"

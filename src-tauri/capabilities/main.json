@@ -33,7 +33,7 @@
           "path": "$APPDATA\\.window-state.json"
         },
         {
-          "path": "$RESOURCE\\bpsr-logs.exe"
+          "path": "$RESOURCE\\bptimer-auto.exe"
         }
       ]
     }

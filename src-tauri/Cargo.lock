@@ -408,7 +408,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bpsr-logs"
+name = "bptimer-auto"
 version = "0.20.1"
 dependencies = [
  "blueprotobuf-lib",

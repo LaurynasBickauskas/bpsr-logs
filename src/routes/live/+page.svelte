@@ -287,7 +287,7 @@
         accept: "application/json",
         authorization: MOB_COLLECTION_AUTH_TOKEN,
       },
-      signal,
+      signal: signal ?? null,
     });
 
     if (!response.ok) {
@@ -487,35 +487,45 @@
 
   function parseMobHpUpdate(raw: string): MobHpUpdate[] {
     const parsed = JSON.parse(raw);
+    const updates: MobHpUpdate[] = [];
 
-    if (!Array.isArray(parsed)) {
+    const collect = (node: unknown) => {
+      if (!node) {
+        return;
+      }
+      if (Array.isArray(node)) {
+        if (
+          node.length >= 3 &&
+          typeof node[0] === "string" &&
+          typeof node[1] === "number" &&
+          typeof node[2] === "number"
+        ) {
+          const [remoteId, serverId, hpPercent] = node;
+          updates.push({
+            remote_id: remoteId,
+            server_id: serverId,
+            hp_percent: clampPercent(hpPercent),
+          });
+          return;
+        }
+
+        for (const item of node) {
+          collect(item);
+        }
+      } else if (typeof node === "object") {
+        for (const value of Object.values(node as Record<string, unknown>)) {
+          collect(value);
+        }
+      }
+    };
+
+    collect(parsed);
+
+    if (updates.length === 0) {
       throw new Error("Unexpected mob_hp_updates payload format");
     }
 
-    const records = parsed.length > 0 && Array.isArray(parsed[0]) ? parsed : [parsed];
-
-    return records.map((record) => {
-      if (!Array.isArray(record) || record.length < 3) {
-        throw new Error("Unexpected mob_hp_updates payload format");
-      }
-
-      const [remoteId, serverId, hpPercent] = record;
-      if (typeof remoteId !== "string") {
-        throw new Error("mob_hp_updates payload missing remote id");
-      }
-      if (typeof serverId !== "number") {
-        throw new Error("mob_hp_updates payload missing server id");
-      }
-      if (typeof hpPercent !== "number") {
-        throw new Error("mob_hp_updates payload missing hp percent");
-      }
-
-      return {
-        remote_id: remoteId,
-        server_id: serverId,
-        hp_percent: clampPercent(hpPercent),
-      };
-    });
+    return updates;
   }
 
   function delay(ms: number, signal: AbortSignal) {
@@ -633,18 +643,13 @@
           <div class="grid w-full max-h-[80px] gap-2 grid-cols-10 overflow-y-auto">
             {#each mobHpData
               .filter((mob) => {
-                if (mob.hp_percent == 100 && mob.server_id < 20) { 
-                  return false;
-                }
+
                 if(currentLineId === mob.server_id) {
                   return true;
                 }
                 return mob.hp_percent > 0;
               })
-              .sort((a, b) => a.hp_percent - b.hp_percent ||  b.server_id - a.server_id )
-              .slice(0, 200
-
-              ) as mob}
+              .sort((a, b) => a.hp_percent - b.hp_percent ||  b.server_id - a.server_id ) as mob}
               <div class={`relative overflow-hidden rounded-md border ${currentLineId === mob.server_id ? "border-primary/80 ring-2 ring-primary/30" : "border-neutral-700"} bg-neutral-900/60 p-2 text-center text-xs`}>
                 <div
                   class={`absolute inset-y-0 left-0 ${barClass(mob.hp_percent)} transition-all duration-200`}

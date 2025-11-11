@@ -115,14 +115,6 @@
       label: "Toggle Live Meter",
     },
     {
-      id: "enableClickthrough",
-      label: "Enable Clickthrough",
-    },
-    {
-      id: "disableClickthrough",
-      label: "Disable Clickthrough",
-    },
-    {
       id: "toggleClickthrough",
       label: "Toggle Clickthrough",
     },

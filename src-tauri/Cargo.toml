@@ -1,5 +1,5 @@
 [package]
-name = "bpsr-logs"
+name = "bptimer-auto"
 version = "0.20.1"
 description = "Blue Protocol: Star Resonance DPS Meter written in Rust"
 authors = ["winjwinj"]
@@ -11,7 +11,7 @@ edition = "2024"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "bpsr_logs_lib"
+name = "bptimer_auto_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -1,15 +1,15 @@
-# BP:SR Logs
+# bptimer-auto
 
-[![GitHub](https://img.shields.io/github/downloads/winjwinj/bpsr-logs/total?style=for-the-badge&color=%23ff9800)](https://github.com/winjwinj/bpsr-logs/releases/latest) [![Discord](https://img.shields.io/discord/1417447600608510015?color=%235865F2&label=Discord&style=for-the-badge)](https://discord.gg/Tcc54ST5BU)
+[![GitHub](https://img.shields.io/github/downloads/winjwinj/bptimer-auto/total?style=for-the-badge&color=%23ff9800)](https://github.com/winjwinj/bptimer-auto/releases/latest) [![Discord](https://img.shields.io/discord/1417447600608510015?color=%235865F2&label=Discord&style=for-the-badge)](https://discord.gg/Tcc54ST5BU)
 
-[![GitHub](https://img.shields.io/github/v/release/winjwinj/bpsr-logs?style=flat-square)](https://github.com/winjwinj/bpsr-logs/releases)
-[![GitHub](https://img.shields.io/github/license/winjwinj/bpsr-logs?style=flat-square)](https://github.com/winjwinj/bpsr-logs/blob/master/LICENSE)
+[![GitHub](https://img.shields.io/github/v/release/winjwinj/bptimer-auto?style=flat-square)](https://github.com/winjwinj/bptimer-auto/releases)
+[![GitHub](https://img.shields.io/github/license/winjwinj/bptimer-auto?style=flat-square)](https://github.com/winjwinj/bptimer-auto/blob/master/LICENSE)
 
-BPSR Logs is a "blazingly fast" open source Blue Protocol: Star Resonance DPS meter, written in Rust by [winj](https://github.com/winjwinj). It is heavily inspired by [loa-logs](https://github.com/snoww/loa-logs), and uses reverse engineering work done by [StarResonanceDamageCounter](https://github.com/dmlgzs/StarResonanceDamageCounter) and [@Yuerino](https://github.com/Yuerino).
+bptimer-auto is a "blazingly fast" open source Blue Protocol: Star Resonance DPS meter, written in Rust by [winj](https://github.com/winjwinj). It is heavily inspired by [loa-logs](https://github.com/snoww/loa-logs), and uses reverse engineering work done by [StarResonanceDamageCounter](https://github.com/dmlgzs/StarResonanceDamageCounter) and [@Yuerino](https://github.com/Yuerino).
 
 # Download
 
-https://github.com/winjwinj/bpsr-logs/releases/latest
+https://github.com/winjwinj/bptimer-auto/releases/latest
 
 \*currently only Windows 7 and up is supported
 
