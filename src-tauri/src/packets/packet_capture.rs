@@ -236,9 +236,3 @@ async fn read_packets(
         }
     }
 }
-
-pub fn request_restart() {
-    if let Some(sender) = RESTART_SENDER.get() {
-        let _ = sender.send(true);
-    }
-}

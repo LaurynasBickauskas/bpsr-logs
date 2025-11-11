@@ -1,33 +1,12 @@
-use crate::live::commands_models::HeaderInfo;
 use crate::live::crowdsource_persistence::{save_snapshot, CrowdsourceMonsterSnapshot};
 use crate::live::opcodes_models::{
-    get_crowdsource_monster_choices, resolve_crowdsource_remote, Encounter, EncounterMutex,
+    get_crowdsource_monster_choices, resolve_crowdsource_remote, EncounterMutex,
 };
 use crate::live::bptimer_stream::{BPTIMER_BASE_URL, CREATE_HP_REPORT_ENDPOINT, CROWD_SOURCE_API_KEY};
-use crate::packets::packet_capture::request_restart;
-use crate::WINDOW_LIVE_LABEL;
 use log::{info, warn};
 use reqwest::Client;
 use serde::Serialize;
 use specta::Type;
-use tauri::Manager;
-use window_vibrancy::{apply_blur, clear_blur};
-
-#[tauri::command]
-#[specta::specta]
-pub fn enable_blur(app: tauri::AppHandle) {
-    if let Some(meter_window) = app.get_webview_window(WINDOW_LIVE_LABEL) {
-        apply_blur(&meter_window, Some((10, 10, 10, 50))).ok();
-    }
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn disable_blur(app: tauri::AppHandle) {
-    if let Some(meter_window) = app.get_webview_window(WINDOW_LIVE_LABEL) {
-        clear_blur(&meter_window).ok();
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Type)]
 pub struct CrowdsourcedMonster {
@@ -41,14 +20,6 @@ pub struct CrowdsourcedMonsterOption {
     pub name: String,
     pub id: i32,
     pub remote_id: String,
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn get_last_hit_boss_name(state: tauri::State<'_, EncounterMutex>) -> Option<String> {
-    let encounter = state.lock().unwrap();
-    let result = encounter.crowdsource_monster_name.clone();
-    result
 }
 
 #[tauri::command]
@@ -209,47 +180,4 @@ pub async fn mark_current_crowdsourced_line_dead(
     }
 
     Ok(())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn get_header_info(state: tauri::State<'_, EncounterMutex>) -> Result<HeaderInfo, String> {
-    let encounter = state.lock().unwrap();
-    if encounter.dmg_stats.value == 0 {
-        return Err("No damage found".to_string());
-    }
-
-    let time_elapsed_ms = encounter.time_last_combat_packet_ms - encounter.time_fight_start_ms;
-
-    let encounter_stats = &encounter.dmg_stats;
-
-    Ok(HeaderInfo {
-        total_dmg: encounter_stats.value as f64,
-        elapsed_ms: time_elapsed_ms as f64,
-        time_last_combat_packet_ms: encounter.time_last_combat_packet_ms as f64,
-    })
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn hard_reset(state: tauri::State<'_, EncounterMutex>) {
-    let mut encounter = state.lock().unwrap();
-    encounter.clone_from(&Encounter::default());
-    request_restart();
-    info!("Hard Reset");
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn reset_encounter(state: tauri::State<'_, EncounterMutex>) {
-    let mut encounter = state.lock().unwrap();
-    encounter.clone_from(&Encounter::default());
-    info!("encounter reset");
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn toggle_pause_encounter(state: tauri::State<'_, EncounterMutex>) {
-    let mut encounter = state.lock().unwrap();
-    encounter.is_encounter_paused = !encounter.is_encounter_paused;
 }

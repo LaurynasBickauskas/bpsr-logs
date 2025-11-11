@@ -6,7 +6,6 @@ const IS_WIN_11 = parseInt(version().split(".")[2] || "0", 10) >= 22000;
 const DEFAULT_SETTINGS = {
   accessibility: {
     blur: !IS_WIN_11,
-    transparency: false,
   },
   shortcuts: {
     showLiveMeter: "",

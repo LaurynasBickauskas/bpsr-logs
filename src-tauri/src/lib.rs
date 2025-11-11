@@ -8,13 +8,11 @@ use crate::live::crowdsource_persistence::{apply_snapshot_to_encounter, load_sna
 use log::{info, warn};
 use std::process::Command;
 
-use crate::live::commands::{disable_blur, enable_blur};
 use tauri::menu::MenuBuilder;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::window::Color;
 use tauri::{LogicalPosition, LogicalSize, Manager, Position, Size, Window, WindowEvent};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
-use tauri_plugin_svelte::ManagerExt;
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 use tauri_specta::{collect_commands, Builder};
 
@@ -32,18 +30,11 @@ pub fn run() {
 
     let builder = Builder::<tauri::Wry>::new()
         .commands(collect_commands![
-            live::commands::enable_blur,
-            live::commands::disable_blur,
-            live::commands::get_header_info,
-            live::commands::get_last_hit_boss_name,
             live::commands::get_crowdsourced_monster,
             live::commands::get_crowdsourced_monster_options,
             live::commands::set_crowdsourced_monster_remote,
             live::commands::get_local_player_line,
             live::commands::mark_current_crowdsourced_line_dead,
-            live::commands::reset_encounter,
-            live::commands::toggle_pause_encounter,
-            live::commands::hard_reset,
         ]);
 
     #[cfg(debug_assertions)]
@@ -76,7 +67,6 @@ pub fn run() {
             // Setup stuff
             setup_logs(&app_handle).expect("failed to setup logs");
             setup_tray(&app_handle).expect("failed to setup tray");
-            setup_blur(&app_handle);
 
             if let Some(live_window) = app_handle.get_webview_window(WINDOW_LIVE_LABEL) {
                 if let Err(e) = live_window.set_background_color(Some(Color(0, 0, 0, 0))) {
@@ -307,14 +297,6 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         })
         .build(app)?;
     Ok(())
-}
-
-fn setup_blur(app: &tauri::AppHandle) {
-    if app.svelte().get_or::<bool>("accessibility", "blur", true) {
-        enable_blur(app.clone());
-    } else {
-        disable_blur(app.clone());
-    }
 }
 
 fn on_window_event_fn(window: &Window, event: &WindowEvent) {

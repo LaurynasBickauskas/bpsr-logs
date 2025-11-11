@@ -5,23 +5,6 @@
 
 
 export const commands = {
-async enableBlur() : Promise<void> {
-    await TAURI_INVOKE("enable_blur");
-},
-async disableBlur() : Promise<void> {
-    await TAURI_INVOKE("disable_blur");
-},
-async getHeaderInfo() : Promise<Result<HeaderInfo, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_header_info") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async getLastHitBossName() : Promise<string | null> {
-    return await TAURI_INVOKE("get_last_hit_boss_name");
-},
 async getCrowdsourcedMonster() : Promise<CrowdsourcedMonster | null> {
     return await TAURI_INVOKE("get_crowdsourced_monster");
 },
@@ -51,15 +34,6 @@ async markCurrentCrowdsourcedLineDead() : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
-},
-async resetEncounter() : Promise<void> {
-    await TAURI_INVOKE("reset_encounter");
-},
-async togglePauseEncounter() : Promise<void> {
-    await TAURI_INVOKE("toggle_pause_encounter");
-},
-async hardReset() : Promise<void> {
-    await TAURI_INVOKE("hard_reset");
 }
 }
 
@@ -75,7 +49,6 @@ async hardReset() : Promise<void> {
 
 export type CrowdsourcedMonster = { name: string; id: number; remote_id: string | null }
 export type CrowdsourcedMonsterOption = { name: string; id: number; remote_id: string }
-export type HeaderInfo = { totalDmg: number; elapsedMs: number; timeLastCombatPacketMs: number }
 
 /** tauri-specta globals **/
 

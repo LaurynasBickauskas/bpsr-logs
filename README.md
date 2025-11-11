@@ -101,10 +101,6 @@ A: Are you trying to install on a custom install folder with different permissio
 
 A: The meter needs Microsoft Edge Webview2 Runtime to run. Yours is probably missing or out of date. Go uninstall it first (it won't let you install it if you have an older version installed), then download and install from [here](https://go.microsoft.com/fwlink/p/?LinkId=2124703) (https://go.microsoft.com/fwlink/p/?LinkId=2124703).
 
-### Q: The meter window lags a lot when dragging around
-
-A: Are you on Windows 11? Disable blur in the settings (settings > accessibility). If you wish to have a dark background with blur disabled, also disable the transparency setting to have a pseudo dark mode.
-
 ### Q: Why is some of my information missing when others have it?
 
 A: You opened the meter too late, and it wasn't able to get your character information. It is doing its best by guessing. You can fix this by: switching lines, moving to a different area, relogging, etc.

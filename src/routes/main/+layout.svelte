@@ -19,7 +19,7 @@
   });
 </script>
 
-<div class="bg-background text-foreground flex min-h-screen flex-col">
+<div class="text-foreground flex min-h-screen flex-col">
   <Header />
   <main class="flex-1">
     <div class="mx-auto px-8 py-4">

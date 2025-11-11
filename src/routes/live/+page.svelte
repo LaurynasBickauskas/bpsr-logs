@@ -55,6 +55,8 @@
   let isMonsterDropdownOpen = $state(false);
   let dropdownContainer: HTMLDivElement | null = null;
   let selectedMonsterOption: CrowdsourcedMonsterOption | null = $state(null);
+  let bossMonsterOptions: CrowdsourcedMonsterOption[] = $state([]);
+  let magicalCreatureOptions: CrowdsourcedMonsterOption[] = $state([]);
 
   type HpChangeRecord = { hp: number; timestamp: number };
 
@@ -74,8 +76,32 @@
   let seedNonce = 0;
   const textDecoder = new TextDecoder();
 
+  const MAGICAL_CREATURE_SLUGS = new Set([
+    "lovely_boarlet",
+    "breezy_boarlet",
+    "loyal_boarlet",
+    "golden_nappo",
+    "silver_nappo",
+  ]);
+
+  function toMonsterSlug(monsterName: string) {
+    return monsterName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_|_$/g, "");
+  }
+
+  function isMagicalCreature(monsterName: string) {
+    return MAGICAL_CREATURE_SLUGS.has(toMonsterSlug(monsterName));
+  }
+
   function monsterImageSrc(monsterName: string) {
-    const slug = monsterName.toLowerCase().replace(/\s+/g, "_");
+    const slug = toMonsterSlug(monsterName);
+
+    if (MAGICAL_CREATURE_SLUGS.has(slug)) {
+      return `https://bptimer.com/images/magical-creatures/${slug}.webp`;
+    }
+
     return `https://bptimer.com/images/bosses/${slug}.webp`;
   }
 
@@ -126,6 +152,28 @@
       selectedRemoteId && monsterOptions.length > 0
         ? monsterOptions.find((option) => option.remote_id === selectedRemoteId) ?? null
         : null;
+  });
+
+  $effect(() => {
+    if (!monsterOptions || monsterOptions.length === 0) {
+      bossMonsterOptions = [];
+      magicalCreatureOptions = [];
+      return;
+    }
+
+    const bosses: CrowdsourcedMonsterOption[] = [];
+    const magical: CrowdsourcedMonsterOption[] = [];
+
+    for (const option of monsterOptions) {
+      if (isMagicalCreature(option.name)) {
+        magical.push(option);
+      } else {
+        bosses.push(option);
+      }
+    }
+
+    bossMonsterOptions = bosses;
+    magicalCreatureOptions = magical;
   });
 
   function mobKey(entry: MobHpData) {
@@ -746,7 +794,30 @@
               </div>
             {:else}
               <div class="max-h-72 overflow-y-auto py-1">
-                {#each monsterOptions as option (option.remote_id)}
+                {#each bossMonsterOptions as option (option.remote_id)}
+                  <button
+                    type="button"
+                    class={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-neutral-800/80 ${selectedRemoteId === option.remote_id ? "bg-neutral-800/70" : ""}`}
+                    role="option"
+                    aria-selected={selectedRemoteId === option.remote_id}
+                    on:click={() => selectMonster(option)}
+                  >
+                    <img
+                      src={monsterImageSrc(option.name)}
+                      alt={`${option.name} icon`}
+                      class="h-8 w-8 shrink-0 rounded-full object-cover"
+                      loading="lazy"
+                    />
+                    <span class="flex-1 truncate text-neutral-200">{option.name}</span>
+                    {#if selectedRemoteId === option.remote_id}
+                      <span class="text-xs uppercase tracking-wide text-primary">Active</span>
+                    {/if}
+                  </button>
+                {/each}
+                {#if bossMonsterOptions.length > 0 && magicalCreatureOptions.length > 0}
+                  <div role="separator" class="mx-2 my-1 border-t border-neutral-800/80"></div>
+                {/if}
+                {#each magicalCreatureOptions as option (option.remote_id)}
                   <button
                     type="button"
                     class={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-neutral-800/80 ${selectedRemoteId === option.remote_id ? "bg-neutral-800/70" : ""}`}

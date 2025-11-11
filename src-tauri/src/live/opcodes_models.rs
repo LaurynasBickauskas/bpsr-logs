@@ -12,7 +12,6 @@ pub struct Encounter {
     pub time_fight_start_ms: u128,
     pub local_player_uid: Option<i64>,
     pub entity_uid_to_entity: HashMap<i64, Entity>,
-    pub dmg_stats: CombatStats,
     pub local_player: Option<SyncContainerData>,
     pub crowdsource_monster_name: Option<String>,
     pub crowdsource_monster_id: Option<i32>,
@@ -26,11 +25,6 @@ pub struct Entity {
     pub monster_id: Option<i32>,
     pub curr_hp: Option<i32>, 
     pub max_hp: Option<i32>,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct CombatStats {
-    pub value: i64,
 }
 
 pub static MONSTER_NAMES: Lazy<HashMap<i32, String>> = Lazy::new(|| {
