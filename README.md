@@ -1,6 +1,7 @@
 # bptimer-auto
 
-`bptimer-auto` is a streamlined companion to [`bpsr-logs`](https://github.com/winjwinj/bpsr-logs), focused entirely on tracking Blue Protocol: Star Resonance boss encounters.
+`bptimer-auto` is a streamlined companion to [`bpsr-logs`](https://github.com/winjwinj/bpsr-logs), focused entirely on tracking Blue Protocol: Star Resonance world boss hp
+syncs and reports to https://bptimer.com/
 
 ## Download
 - Latest builds: https://github.com/LaurynasBickauskas/bpsr-logs/releases/latest
